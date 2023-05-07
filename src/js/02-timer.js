@@ -2,22 +2,18 @@ import flatpickr from 'flatpickr';
 import 'flatpickr/dist/flatpickr.min.css';
 import { Report } from 'notiflix/build/notiflix-report-aio';
 
-document.body.style.backgroundColor = '#ece5da';
-const TIMER_DELAY = 1000;
-let intervalId = null;
-let selectedDate = null;
-let currentDate = null;
+let getRef = selector => document.querySelector(selector);
+const imputDatePickerRef = getRef('#datetime-picker');
+const btnStartRef = getRef('[data-start]');
+const daysRef = getRef('[data-days]');
+const hoursRef = getRef('[data-hours]');
+const minutesRef = getRef('[data-minutes]');
+const secondsRef = getRef('[data-seconds]');
 
-const startBtn = document.querySelector('[data-start-timer]');
-const dataDays = document.querySelector('[data-days]');
-const dataHours = document.querySelector('[data-hours]');
-const dataMinutes = document.querySelector('[data-minutes]');
-const dataSeconds = document.querySelector('[data-seconds]');
-
-const flatpickrInput = document.querySelector('#datetime-picker');
-
-startBtn.disabled = true;
-startBtn.addEventListener('click', onStartCounter);
+// Set initial value
+let timeDifference = 0;
+let timerId = null;
+let formatDate = null;
 
 const options = {
   enableTime: true,
@@ -25,87 +21,68 @@ const options = {
   defaultDate: new Date(),
   minuteIncrement: 1,
   onClose(selectedDates) {
-    if (selectedDates[0].getTime() < Date.now()) {
-      Report.failure(
-        'Ooops...',
-        'Please, choose a date in the future and remember: "Knowledge rests not upon truth alone, but upon error also." - Carl Gustav Jung',
-        'Okay'
-      );
-    } else {
-      selectedDate = selectedDates[0].getTime();
-      startBtn.disabled = false;
-      Report.success(
-        'Congratulation! Click on start!',
-        '"Do not try to become a person of success but try to become a person of value." <br/><br/>- Albert Einstein',
-        'Okay'
-      );
-    }
+    console.log(selectedDates[0]);
+    currentDifferenceDate(selectedDates[0]);
   },
 };
 
-const fp = flatpickr(flatpickrInput, options);
+btnStartRef.setAttribute('disabled', true);
 
-Report.info(
-  'Greeting, my Friend!',
-  'Please, choose a date and click on start',
-  'Okay'
-);
+flatpickr(imputDatePickerRef, options);
 
-function onStartCounter() {
-  counter.start();
+btnStartRef.addEventListener('click', onBtnStart);
+
+window.addEventListener('keydown', e => {
+  if (e.code === 'Escape' && timerId) {
+    clearInterval(timerId);
+
+    imputDatePickerRef.removeAttribute('disabled');
+    btnStartRef.setAttribute('disabled', true);
+
+    secondsRef.textContent = '00';
+    minutesRef.textContent = '00';
+    hoursRef.textContent = '00';
+    daysRef.textContent = '00';
+  }
+});
+
+function onBtnStart() {
+  timerId = setInterval(startTimer, 1000);
 }
 
-function convertMs(ms) {
-  const second = 1000;
-  const minute = second * 60;
-  const hour = minute * 60;
-  const day = hour * 24;
+function currentDifferenceDate(selectedDates) {
+  const currentDate = Date.now();
 
-  const days = addLeadingZero(Math.floor(ms / day));
-  const hours = addLeadingZero(Math.floor((ms % day) / hour));
-  const minutes = addLeadingZero(Math.floor(((ms % day) % hour) / minute));
-  const seconds = addLeadingZero(
-    Math.floor((((ms % day) % hour) % minute) / second)
-  );
+  if (selectedDates < currentDate) {
+    btnStartRef.setAttribute('disabled', true);
+    return Notify.failure('Please choose a date in the future');
+  }
 
-  return { days, hours, minutes, seconds };
+  timeDifference = selectedDates.getTime() - currentDate;
+  formatDate = convertMs(timeDifference);
+
+  renderDate(formatDate);
+  btnStartRef.removeAttribute('disabled');
 }
 
-const counter = {
-  start() {
-    intervalId = setInterval(() => {
-      currentDate = Date.now();
-      const deltaTime = selectedDate - currentDate;
-      updateTimerface(convertMs(deltaTime));
-      startBtn.disabled = true;
-      flatpickrInput.disabled = true;
+function startTimer() {
+  btnStartRef.setAttribute('disabled', true);
+  imputDatePickerRef.setAttribute('disabled', true);
 
-      if (deltaTime <= 1000) {
-        this.stop();
-        Report.info(
-          'Congratulation! Timer stopped!',
-          'Please, if you want to start timer, choose a date and click on start or reload this page',
-          'Okay'
-        );
-      }
-    }, TIMER_DELAY);
-  },
+  timeDifference -= 1000;
 
-  stop() {
-    startBtn.disabled = true;
-    flatpickrInput.disabled = false;
-    clearInterval(intervalId);
-    return;
-  },
-};
-
-function updateTimerface({ days, hours, minutes, seconds }) {
-  dataDays.textContent = `${days}`;
-  dataHours.textContent = `${hours}`;
-  dataMinutes.textContent = `${minutes}`;
-  dataSeconds.textContent = `${seconds}`;
+  if (secondsRef.textContent <= 0 && minutesRef.textContent <= 0) {
+    Notify.success('Time end');
+    clearInterval(timerId);
+  } else {
+    formatDate = convertMs(timeDifference);
+    renderDate(formatDate);
+  }
 }
 
-function addLeadingZero(value) {
-  return String(value).padStart(2, '0');
+function renderDate(formatDate) {
+  secondsRef.textContent = formatDate.seconds;
+  minutesRef.textContent = formatDate.minutes;
+  hoursRef.textContent = formatDate.hours;
+  daysRef.textContent = formatDate.days;
 }
