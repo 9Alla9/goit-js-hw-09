@@ -11,7 +11,7 @@ const options = {
   cssAnimationStyle: 'from-right',
 };
 
-form.addEventListener('click', onPromiseCreate);
+form.addEventListener('submit', onFormSubmit);
 
 function createPromise(position, delay) {
   return new Promise((resolve, reject) => {
@@ -26,7 +26,7 @@ function createPromise(position, delay) {
   });
 }
 
-function onPromiseCreate(e) {
+function onFormSubmit(e) {
   e.preventDefault();
   const { delay, step, amount } = e.currentTarget.elements;
   let inputDelay = Number(delay.value);
@@ -34,8 +34,6 @@ function onPromiseCreate(e) {
   let inputAmount = Number(amount.value);
 
   for (let i = 1; i <= inputAmount; i += 1) {
-    inputDelay += inputStep;
-
     createPromise(i, inputDelay)
       .then(({ position, delay }) => {
         Notify.success(
@@ -49,6 +47,7 @@ function onPromiseCreate(e) {
           options
         );
       });
-    e.currentTarget.reset();
+    inputDelay += inputStep;
   }
+  e.currentTarget.reset();
 }
